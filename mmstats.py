@@ -47,10 +47,10 @@ def custom_scoring(scores):
     return rv
 
 
-def simulate(scores):
+def simulate(scores, tests_no):
     # TODO: move to numpy to improve speed
     sum = [0.0] * len(scores)
-    for i in range(len(scores[0])):
+    for i in range(tests_no):
         t = random.randint(0, len(scores[0]) - 1)
         for j in range(len(scores)):
             sum[j] += scores[j][t]
@@ -94,6 +94,7 @@ def main():
     parser.add_argument('-p', '--places', type=int, default=0, help='number of places to show')
     parser.add_argument('-d', '--digits', type=int, default=2, help='number of precision digits to use for printing')
     parser.add_argument('-n', '--simulations', type=int, default=1000, help='number of simulations to perform')
+    parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
     args = parser.parse_args()
 
     print(args.round_id)
@@ -117,12 +118,14 @@ def main():
         handles += [h]
         scores += [s]
 
+    args.tests = args.tests or len(scores[0])
+
     scores = custom_scoring(scores)
 
     places = [[0] * args.limit for i in range(args.limit)]
     for i in range(args.simulations):
         print('\rPerforming simulations:', i + 1, '/', args.simulations, '       ', end='')
-        result = simulate(scores)
+        result = simulate(scores, args.tests)
         for j, v in enumerate(result):
             places[j][v] += 1
     print()
