@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 import argparse
 import copy
 import random
+import numpy as np
 
 
 def retrieve_individual_results(round_id, handle_id):
@@ -48,13 +49,13 @@ def custom_scoring(scores):
 
 
 def simulate(scores, tests_no):
-    # TODO: move to numpy to improve speed
-    sum = [0.0] * len(scores)
+    np_scores = np.transpose(np.array(scores, dtype=float))
+    np_sum = np.zeros(len(scores), dtype=float)
     for i in range(tests_no):
         t = random.randint(0, len(scores[0]) - 1)
-        for j in range(len(scores)):
-            sum[j] += scores[j][t]
+        np_sum += np_scores[t]
 
+    sum = np_sum.tolist()
     order = [p for _, p in sorted(zip(sum, [i for i in range(len(sum))]), reverse=True)]
 
     rv = [0] * len(scores)
@@ -124,7 +125,8 @@ def main():
 
     places = [[0] * args.limit for i in range(args.limit)]
     for i in range(args.simulations):
-        print('\rPerforming simulations:', i + 1, '/', args.simulations, '       ', end='')
+        if i % 10 == 9:
+            print('\rPerforming simulations:', i + 1, '/', args.simulations, '       ', end='')
         result = simulate(scores, args.tests)
         for j, v in enumerate(result):
             places[j][v] += 1
