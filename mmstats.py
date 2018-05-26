@@ -13,7 +13,9 @@ import pickle
 import os.path
 import numpy as np
 
+
 args = None
+
 
 def retrieve_individual_results(round_id, handle_id):
     url = 'http://www.topcoder.com/longcontest/stats/?module=IndividualResultsFeed&rd={}&cr={}'.format(round_id, handle_id)
@@ -39,29 +41,69 @@ def parse_match_results(xml):
     return [id for _, id in sorted(zip(places, coder_ids))]
 
 
-def custom_scoring(scores):
-    rv = copy.deepcopy(scores)
+def scoring_raw(scores):
+    return [max(v, 0) for v in scores]
+
+
+def scoring_relative_max(scores):
+    best = max([v for v in scores if v > 0]) or None
+    return [v / best if v > 0 else 0 for v in scores]
+
+
+def scoring_relative_min(scores):
+    best = min([v for v in scores if v > 0]) or None
+    return [best / v if v > 0 else 0 for v in scores]
+
+
+def scoring_rank_max(scores):
+    rv = []
+    for i, vi in enumerate(scores):
+        tot = 0
+        for j, vj in enumerate(scores):
+            if i == j:
+                continue
+            if vi > vj:
+                tot += 1
+            if vi == vj:
+                tot += 0.5
+        rv += [tot / (len(scores) - 1)]
+    return rv
+
+
+def scoring_custom(scores):
+    best = min([v for v in scores if v > 0]) or None
+    return [(best / v) ** 2 if v > 0 else 0 for v in scores]
+
+
+def process_scores(scores, scoring):
+    scoring_functions = {
+        'relmax': scoring_relative_max,
+        'relmin': scoring_relative_max,
+        'raw': scoring_raw,
+        'rankmax': scoring_rank_max,
+        'custom': scoring_custom,
+    }
+
+    scoring_function = scoring_functions[scoring]
+
+    rv = []
     for i in range(len(scores[0])):
-        best = None
-        for j in range(len(scores)):
-            if scores[j][i] > 0 and (best is None or scores[j][i] < best):
-                best = scores[j][i]
-        for j in range(len(scores)):
-            rv[j][i] = (best / scores[j][i]) ** 2 if scores[j][i] > 0 else 0
+        test_case = [scores[j][i] for j in range(len(scores))]
+        rv += [scoring_function(test_case)]
     return rv
 
 
 def simulate(scores, tests_no):
-    np_scores = np.transpose(np.array(scores, dtype=float))
-    np_sum = np.zeros(len(scores), dtype=float)
+    np_scores = np.array(scores, dtype=float)
+    np_sum = np.zeros(len(scores[0]), dtype=float)
     for i in range(tests_no):
-        t = random.randint(0, len(scores[0]) - 1)
+        t = random.randint(0, len(scores) - 1)
         np_sum += np_scores[t]
 
     sum = np_sum.tolist()
     order = [p for _, p in sorted(zip(sum, [i for i in range(len(sum))]), reverse=True)]
 
-    rv = [0] * len(scores)
+    rv = [0] * len(scores[0])
     for i, p in enumerate(order):
         rv[p] = i
     return rv
@@ -143,6 +185,7 @@ def main():
     parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
     parser.add_argument('-f', '--format', choices=['tc', 'plain'], default='tc', help='how to format the output, tc adds [h] tags for forum post')
     parser.add_argument('-c', '--cache', action='store_true', help='adds caching (saves round data to file and tries to reuse it)')
+    parser.add_argument('--scoring', choices=['relmax', 'relmin', 'raw', 'rankmax', 'custom'], default='raw', help='')
     parser.add_argument('--silent', action='store_true', help='doesn\'t print debug info')
 
     global args
@@ -181,7 +224,7 @@ def main():
 
     args.tests = args.tests or len(data['scores'][0])
 
-    scores = custom_scoring(data['scores'][:args.limit])
+    scores = process_scores(data['scores'][:args.limit], args.scoring)
 
     places = [[0] * args.limit for _ in range(args.limit)]
     for i in range(args.simulations):
