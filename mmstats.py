@@ -11,6 +11,7 @@ import copy
 import random
 import numpy as np
 
+args = None
 
 def retrieve_individual_results(round_id, handle_id):
     url = 'http://www.topcoder.com/longcontest/stats/?module=IndividualResultsFeed&rd={}&cr={}'.format(round_id, handle_id)
@@ -84,10 +85,12 @@ def print_table(places, handles, coders_limit, places_limit, digits, style):
     if style == 'tc':
         lines = ['<pre>'] + lines + ['</pre>']
 
-    print('-' * 80)
+    if not args.silent:
+        print('-' * 80)
     for l in lines:
         print(l)
-    print('-' * 80)
+    if not args.silent:
+        print('-' * 80)
 
 
 def main():
@@ -100,9 +103,13 @@ def main():
     parser.add_argument('-n', '--simulations', type=int, default=1000, help='number of simulations to perform')
     parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
     parser.add_argument('-f', '--format', choices=['tc', 'plain'], default='tc', help='how to format the output, tc adds [h] tags for forum post')
+    parser.add_argument('--silent', action='store_true', help='doesn\'t print debug info')
+
+    global args
     args = parser.parse_args()
 
-    print(args.round_id)
+    if not args.silent:
+        print('Round ID:', args.round_id)
     match_results = retrieve_match_results(args.round_id)
     coder_ids = parse_match_results(match_results)
 
@@ -119,7 +126,8 @@ def main():
     for id in coder_ids[0:args.limit]:
         individual_results = retrieve_individual_results(args.round_id, id)
         h, s = parse_individual_results(individual_results)
-        print('Downloaded scores for', h)
+        if not args.silent:
+            print('Downloaded scores for', h)
         handles += [h]
         scores += [s]
 
@@ -130,7 +138,8 @@ def main():
     places = [[0] * args.limit for i in range(args.limit)]
     for i in range(args.simulations):
         if i % 10 == 9:
-            print('\rPerforming simulations:', i + 1, '/', args.simulations, '       ', end='')
+            if not args.silent:
+                print('\rPerforming simulations:', i + 1, '/', args.simulations, '       ', end='')
         result = simulate(scores, args.tests)
         for j, v in enumerate(result):
             places[j][v] += 1
