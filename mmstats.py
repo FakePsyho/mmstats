@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 import argparse
 import copy
 import random
+import pickle
+import os.path
 import numpy as np
 
 args = None
@@ -93,6 +95,43 @@ def print_table(places, handles, coders_limit, places_limit, digits, style):
         print('-' * 80)
 
 
+CURRENT_VERSION = 0.1
+
+
+def get_file_name(round_id):
+    return 'round' + str(round_id) + '.data'
+
+
+def load_data(round_id):
+    fn = get_file_name(round_id)
+    if not os.path.isfile(fn):
+        if not args.silent:
+            print('Unable to find cache file:', fn)
+        return {}
+
+    with open(fn, 'rb') as f:
+        rv = pickle.load(f)
+
+    if rv['version'] != CURRENT_VERSION:
+        if not args.silent:
+            print('Cache file was created with a different version:', rv['version'], 'instead of', CURRENT_VERSION)
+        return {}
+
+    if not args.silent:
+        print('Cache data loaded successfully')
+
+    return rv
+
+
+def save_data(round_id, data):
+    data['version'] = CURRENT_VERSION
+    with open(get_file_name(round_id), 'wb') as f:
+        pickle.dump(data, f)
+
+    if not args.silent:
+        print('Cache data saved successfully')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Produces placement distribution for specific Marathon Match')
     parser.add_argument('round_id', type=int, help='round ID (usually a 5-digit number)')
@@ -103,6 +142,7 @@ def main():
     parser.add_argument('-n', '--simulations', type=int, default=1000, help='number of simulations to perform')
     parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
     parser.add_argument('-f', '--format', choices=['tc', 'plain'], default='tc', help='how to format the output, tc adds [h] tags for forum post')
+    parser.add_argument('-c', '--cache', action='store_true', help='adds caching (saves round data to file and tries to reuse it)')
     parser.add_argument('--silent', action='store_true', help='doesn\'t print debug info')
 
     global args
@@ -110,8 +150,12 @@ def main():
 
     if not args.silent:
         print('Round ID:', args.round_id)
-    match_results = retrieve_match_results(args.round_id)
-    coder_ids = parse_match_results(match_results)
+
+    data = load_data(args.round_id) if args.cache else {}
+
+    if 'coder_ids' not in data:
+        match_results = retrieve_match_results(args.round_id)
+        data['coder_ids'] = parse_match_results(match_results)
 
     args.limit = args.limit or len(coder_ids)
     args.show = args.show or args.limit
@@ -120,20 +164,24 @@ def main():
     assert(args.show <= args.limit)
     assert(args.places <= args.limit)
 
-    handles = []
-    scores = []
+    if 'handles' not in data:
+        data['handles'] = []
+        data['scores'] = []
 
-    for id in coder_ids[0:args.limit]:
+    for id in data['coder_ids'][len(data['handles']):args.limit]:
         individual_results = retrieve_individual_results(args.round_id, id)
         h, s = parse_individual_results(individual_results)
         if not args.silent:
             print('Downloaded scores for', h)
-        handles += [h]
-        scores += [s]
+        data['handles'] += [h]
+        data['scores'] += [s]
 
-    args.tests = args.tests or len(scores[0])
+    if args.cache:
+        save_data(args.round_id, data)
 
-    scores = custom_scoring(scores)
+    args.tests = args.tests or len(data['scores'][0])
+
+    scores = custom_scoring(data['scores'][:args.limit])
 
     places = [[0] * args.limit for i in range(args.limit)]
     for i in range(args.simulations):
@@ -150,7 +198,7 @@ def main():
             places[i][j] /= args.simulations
 
     if args.format in ['tc', 'plain']:
-        print_table(places, handles, coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
+        print_table(places, data['handles'][:args.limit], coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
 
 
 if __name__ == "__main__":
