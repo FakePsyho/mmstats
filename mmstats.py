@@ -157,7 +157,7 @@ def main():
         match_results = retrieve_match_results(args.round_id)
         data['coder_ids'] = parse_match_results(match_results)
 
-    args.limit = args.limit or len(coder_ids)
+    args.limit = args.limit or len(data['coder_ids'])
     args.show = args.show or args.limit
     args.places = args.places or args.show
 
@@ -183,7 +183,7 @@ def main():
 
     scores = custom_scoring(data['scores'][:args.limit])
 
-    places = [[0] * args.limit for i in range(args.limit)]
+    places = [[0] * args.limit for _ in range(args.limit)]
     for i in range(args.simulations):
         if i % 10 == 9:
             if not args.silent:
