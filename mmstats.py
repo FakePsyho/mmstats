@@ -64,7 +64,7 @@ def simulate(scores, tests_no):
     return rv
 
 
-def print_for_tc_forum(places, handles, coders_limit, places_limit, digits):
+def print_table(places, handles, coders_limit, places_limit, digits, style):
     lines = [''] * coders_limit
 
     max_handle_len = len(max(handles[:coders_limit], key=len))
@@ -72,14 +72,17 @@ def print_for_tc_forum(places, handles, coders_limit, places_limit, digits):
 
     positions = ' ' * (max_handle_len + 2)
     for i, h in enumerate(handles[:coders_limit]):
-        lines[i] += '[h]' + h + '[/h]' + ' ' * (max_handle_len + 2 - len(h))
+        handle = h if style == 'plain' else '[h]' + h + '[/h]'
+        lines[i] += handle + ' ' * (max_handle_len + 2 - len(h))
 
     for p in range(places_limit):
         positions += ('{:>' + str(cw) + 'd} ').format(p + 1)
         for i in range(coders_limit):
             lines[i] += ('{:>' + str(cw) + '.' + str(digits) + '%} ').format(places[i][p])
 
-    lines = ['<pre>'] + [positions] + lines + ['</pre>']
+    lines = [positions] + lines
+    if style == 'tc':
+        lines = ['<pre>'] + lines + ['</pre>']
 
     print('-' * 80)
     for l in lines:
@@ -96,6 +99,7 @@ def main():
     parser.add_argument('-d', '--digits', type=int, default=2, help='number of precision digits to use for printing')
     parser.add_argument('-n', '--simulations', type=int, default=1000, help='number of simulations to perform')
     parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
+    parser.add_argument('-f', '--format', choices=['tc', 'plain'], default='tc', help='how to format the output, tc adds [h] tags for forum post')
     args = parser.parse_args()
 
     print(args.round_id)
@@ -136,7 +140,8 @@ def main():
         for j in range(len(places[0])):
             places[i][j] /= args.simulations
 
-    print_for_tc_forum(places, handles, coders_limit=args.show, places_limit=args.places, digits=args.digits)
+    if args.format in ['tc', 'plain']:
+        print_table(places, handles, coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
 
 
 if __name__ == "__main__":
