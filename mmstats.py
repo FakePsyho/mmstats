@@ -7,7 +7,6 @@
 import urllib.request
 import xml.etree.ElementTree as ET
 import argparse
-import copy
 import random
 import pickle
 import os.path
@@ -70,6 +69,22 @@ def scoring_rank_max(scores):
     return rv
 
 
+def scoring_rank_min(scores):
+    scores = [v if v > 0 else 1e18 for v in scores]
+    rv = []
+    for i, vi in enumerate(scores):
+        tot = 0
+        for j, vj in enumerate(scores):
+            if i == j:
+                continue
+            if vi < vj:
+                tot += 1
+            if vi == vj:
+                tot += 0.5
+        rv += [tot / (len(scores) - 1)]
+    return rv
+
+
 def scoring_custom(scores):
     best = min([v for v in scores if v > 0]) or None
     return [(best / v) ** 2 if v > 0 else 0 for v in scores]
@@ -81,6 +96,7 @@ def process_scores(scores, scoring):
         'relmin': scoring_relative_max,
         'raw': scoring_raw,
         'rankmax': scoring_rank_max,
+        'rankmin': scoring_rank_min,
         'custom': scoring_custom,
     }
 
@@ -185,7 +201,7 @@ def main():
     parser.add_argument('-t', '--tests', type=int, default=0, help='number of tests per simulation')
     parser.add_argument('-f', '--format', choices=['tc', 'plain'], default='tc', help='how to format the output, tc adds [h] tags for forum post')
     parser.add_argument('-c', '--cache', action='store_true', help='adds caching (saves round data to file and tries to reuse it)')
-    parser.add_argument('--scoring', choices=['relmax', 'relmin', 'raw', 'rankmax', 'custom'], default='raw', help='')
+    parser.add_argument('--scoring', choices=['relmax', 'relmin', 'raw', 'rankmax', 'rankmin', 'custom'], default='raw', help='selects scoring method for scores pre-processing')
     parser.add_argument('--silent', action='store_true', help='doesn\'t print debug info')
 
     global args
