@@ -36,8 +36,9 @@ def retrieve_match_results(round_id):
 
 def parse_match_results(xml):
     coder_ids = [int(e.text) for e in xml.findall('row/coder_id')]
-    places = [int(e.text) for e in xml.findall('row/placed')]
-    return [id for _, id in sorted(zip(places, coder_ids))]
+    placed = [int(e.text) for e in xml.findall('row/placed')]
+    num_submissions = [int(e.text) for e in xml.findall('row/num_submissions')]
+    return [id for _, id, subs in sorted(zip(placed, coder_ids, num_submissions)) if subs > 0]
 
 
 def scoring_raw(scores):
