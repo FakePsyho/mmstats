@@ -94,7 +94,7 @@ def scoring_custom(scores):
 def process_scores(scores, scoring):
     scoring_functions = {
         'relmax': scoring_relative_max,
-        'relmin': scoring_relative_max,
+        'relmin': scoring_relative_min,
         'raw': scoring_raw,
         'rankmax': scoring_rank_max,
         'rankmin': scoring_rank_min,
