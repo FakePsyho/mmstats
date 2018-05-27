@@ -46,12 +46,12 @@ def scoring_raw(scores):
 
 
 def scoring_relative_max(scores):
-    best = max([v for v in scores if v > 0]) or None
+    best = max([v for v in scores if v > 0] + [0]) or None
     return [v / best if v > 0 else 0 for v in scores]
 
 
 def scoring_relative_min(scores):
-    best = min([v for v in scores if v > 0]) or None
+    best = min([v for v in scores if v > 0] + [0]) or None
     return [best / v if v > 0 else 0 for v in scores]
 
 
