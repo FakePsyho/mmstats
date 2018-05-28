@@ -268,7 +268,7 @@ def main():
         scores_sum = np.sum(np.array(scores), axis=0)
         table_data = []
         for pos, idx in enumerate(reversed(np.argsort(np.array(scores_sum)).tolist())):
-            table_data += [[pos + 1, data['handles'][idx], round(scores_sum[idx], args.digits)]]
+            table_data += [[pos + 1, data['handles'][idx], ('{:.' + str(args.digits) + 'f}').format(scores_sum[idx])]]
         print_table(table_data, ['>', 'h>', '>'], args.format)
         return
 
@@ -286,8 +286,7 @@ def main():
         for j in range(len(places[0])):
             places[i][j] /= args.simulations
 
-    if args.format in ['tc', 'plain']:
-        print_place_distribution(places, data['handles'][:args.limit], coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
+    print_place_distribution(places, data['handles'][:args.limit], coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
 
 
 if __name__ == "__main__":
