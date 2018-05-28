@@ -13,6 +13,10 @@ import os.path
 import numpy as np
 
 
+# TODO: [bug] sometimes crashes during downloading data
+# TODO: [option] add scale for showranking
+
+
 args = None
 
 
@@ -117,12 +121,12 @@ def simulate(scores, tests_no):
         t = random.randint(0, len(scores) - 1)
         np_sum += np_scores[t]
 
-    sum = np_sum.tolist()
-    order = [p for _, p in sorted(zip(sum, [i for i in range(len(sum))]), reverse=True)]
+    order = reversed(np.argsort(np_sum).tolist())
 
     rv = [0] * len(scores[0])
     for i, p in enumerate(order):
         rv[p] = i
+
     return rv
 
 
@@ -238,6 +242,10 @@ def main():
         match_results = retrieve_match_results(args.round_id)
         data['coder_ids'] = parse_match_results(match_results)
 
+    if len(data['coder_ids']) == 0:
+        print('[ERROR] Unable to find any data for this round')
+        return
+
     args.limit = args.limit or len(data['coder_ids'])
     args.show = args.show or args.limit
     args.places = args.places or args.show
@@ -249,8 +257,8 @@ def main():
         data['handles'] = []
         data['scores'] = []
 
-    for id in data['coder_ids'][len(data['handles']):args.limit]:
-        individual_results = retrieve_individual_results(args.round_id, id)
+    for coder_id in data['coder_ids'][len(data['handles']):args.limit]:
+        individual_results = retrieve_individual_results(args.round_id, coder_id)
         h, s = parse_individual_results(individual_results)
         if not args.silent:
             print('Downloaded scores for', h)
