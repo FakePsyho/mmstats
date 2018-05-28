@@ -71,7 +71,7 @@ def scoring_rank_max(scores):
 
 
 def scoring_rank_min(scores):
-    scores = [v if v > 0 else 1e18 for v in scores]
+    scores = [v if v > 0 else 1e100 for v in scores]
     rv = []
     for i, vi in enumerate(scores):
         tot = 0
@@ -126,10 +126,25 @@ def simulate(scores, tests_no):
     return rv
 
 
-def print_table(places, handles, coders_limit, places_limit, digits, style):
+def print_table(data, style):
+    # make data full 2d str array
+    data = [list(map(str, l)) for l in data]
+    max_columns = max(map(len, data))
+    data = [l + [''] * (max_columns - len(l)) for l in data]
+
+    col_width = [max([len(data[j][i]) for j in range(len(data))]) for i in range(len(data[0]))]
+
+    for l in data:
+        line = ''
+        for i, s in enumerate(l):
+            line += ('{:>' + str(col_width[i]) + '} ').format(s)
+        print(line)
+
+
+def print_place_distribution(places, handles, coders_limit, places_limit, digits, style):
     lines = [''] * coders_limit
 
-    max_handle_len = len(max(handles[:coders_limit], key=len))
+    max_handle_len = max(map(len, handles[:coders_limit]))
     cw = 3 + (digits + 1 if digits > 0 else 0)
 
     positions = ' ' * (max_handle_len + 2)
@@ -204,6 +219,7 @@ def main():
     parser.add_argument('-c', '--cache', action='store_true', help='adds caching (saves round data to file and tries to reuse it)')
     parser.add_argument('--scoring', choices=['relmax', 'relmin', 'raw', 'rankmax', 'rankmin', 'custom'], default='raw', help='selects scoring method for scores pre-processing')
     parser.add_argument('--silent', action='store_true', help='doesn\'t print debug info')
+    parser.add_argument('--showranking', action='store_true', help='instead of performing simulations, just shows the final ranking')
 
     global args
     args = parser.parse_args()
@@ -243,6 +259,14 @@ def main():
 
     scores = process_scores(data['scores'][:args.limit], args.scoring)
 
+    if args.showranking:
+        scores_sum = np.sum(np.array(scores), axis=0)
+        table_data = []
+        for pos, idx in enumerate(reversed(np.argsort(np.array(scores_sum)).tolist())):
+            table_data += [[pos + 1, data['handles'][idx], round(scores_sum[idx], args.digits)]]
+        print_table(table_data, args.format)
+        return
+
     places = [[0] * args.limit for _ in range(args.limit)]
     for i in range(args.simulations):
         if i % 10 == 9:
@@ -258,7 +282,7 @@ def main():
             places[i][j] /= args.simulations
 
     if args.format in ['tc', 'plain']:
-        print_table(places, data['handles'][:args.limit], coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
+        print_place_distribution(places, data['handles'][:args.limit], coders_limit=args.show, places_limit=args.places, digits=args.digits, style=args.format)
 
 
 if __name__ == "__main__":
