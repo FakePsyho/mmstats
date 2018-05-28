@@ -126,7 +126,7 @@ def simulate(scores, tests_no):
     return rv
 
 
-def print_table(data, style):
+def print_table(data, formatting=None, style='plain'):
     # make data full 2d str array
     data = [list(map(str, l)) for l in data]
     max_columns = max(map(len, data))
@@ -134,30 +134,26 @@ def print_table(data, style):
 
     col_width = [max([len(data[j][i]) for j in range(len(data))]) for i in range(len(data[0]))]
 
+    if formatting is None:
+        formatting = [''] * max_columns
+
+    lines = []
     for l in data:
         line = ''
         for i, s in enumerate(l):
-            line += ('{:>' + str(col_width[i]) + '} ').format(s)
-        print(line)
+            alignment = ''
+            pre = ''
+            post = ''
+            if '>' in formatting[i]:
+                alignment += '>'
+            if '<' in formatting[i]:
+                alignment += '<'
+            if 'h' in formatting[i] and style == 'tc':
+                pre += '[h]'
+                post += '[/h]'
+            line += ('{:' + alignment + str(col_width[i] + len(pre) + len(post)) + '} ').format(pre + s + post)
+        lines += [line]
 
-
-def print_place_distribution(places, handles, coders_limit, places_limit, digits, style):
-    lines = [''] * coders_limit
-
-    max_handle_len = max(map(len, handles[:coders_limit]))
-    cw = 3 + (digits + 1 if digits > 0 else 0)
-
-    positions = ' ' * (max_handle_len + 2)
-    for i, h in enumerate(handles[:coders_limit]):
-        handle = h if style == 'plain' else '[h]' + h + '[/h]'
-        lines[i] += handle + ' ' * (max_handle_len + 2 - len(h))
-
-    for p in range(places_limit):
-        positions += ('{:>' + str(cw) + 'd} ').format(p + 1)
-        for i in range(coders_limit):
-            lines[i] += ('{:>' + str(cw) + '.' + str(digits) + '%} ').format(places[i][p])
-
-    lines = [positions] + lines
     if style == 'tc':
         lines = ['<pre>'] + lines + ['</pre>']
 
@@ -167,6 +163,15 @@ def print_place_distribution(places, handles, coders_limit, places_limit, digits
         print(l)
     if not args.silent:
         print('-' * 80)
+
+
+def print_place_distribution(places, handles, coders_limit, places_limit, digits, style):
+    data = [[''] + [str(i) for i in range(1, 1+places_limit)]]
+    for i, h in enumerate(handles[:coders_limit]):
+        line = [h] + [('{:.' + str(digits) + '%}').format(places[i][p]) for p in range(places_limit)]
+        data += [line]
+
+    print_table(data, ['h<'] + ['>'] * places_limit, style)
 
 
 CURRENT_VERSION = 0.1
@@ -264,7 +269,7 @@ def main():
         table_data = []
         for pos, idx in enumerate(reversed(np.argsort(np.array(scores_sum)).tolist())):
             table_data += [[pos + 1, data['handles'][idx], round(scores_sum[idx], args.digits)]]
-        print_table(table_data, args.format)
+        print_table(table_data, ['>', 'h>', '>'], args.format)
         return
 
     places = [[0] * args.limit for _ in range(args.limit)]
